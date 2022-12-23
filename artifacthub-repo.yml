@@ -18,4 +18,4 @@
 repositoryID: <THE REPOSITORY ID INSIDE OF ARTIFACTHUB> # obtained after publishing the policy for the 1st time
 owners:
 - name: Nicolas Lamirault
-  email: <your email>
+  email: nicolas.lamirault@gmail.com

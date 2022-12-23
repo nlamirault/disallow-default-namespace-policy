@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 
 @test "Accept a valid name" {
-	run kwctl run  --request-path test_data/pod_creation.json  annotated-policy.wasm
+	run kwctl run  --request-path test_data/pod_creation.json policy.wasm
 	[ "$status" -eq 0 ]
 	echo "$output"
 	# shellcheck disable=SC2046
@@ -9,7 +9,7 @@
  }
 
 @test "Reject invalid name" {
-	run kwctl run  --request-path test_data/pod_creation_invalid_name.json annotated-policy.wasm
+	run kwctl run  --request-path test_data/pod_creation_invalid_namespace.json policy.wasm
 	[ "$status" -eq 0 ]
 	echo "$output"
 	# shellcheck disable=SC2046

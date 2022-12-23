@@ -14,8 +14,10 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+name: Project / Rust
+
 on: [push, pull_request]
-name: Continuous integration
+
 jobs:
   check:
     name: Check

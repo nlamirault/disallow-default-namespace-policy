@@ -22,7 +22,7 @@ on:
     tags:
     - 'v*'
 
-name: Release policy
+name: Project / Release policy
 
 jobs:
 

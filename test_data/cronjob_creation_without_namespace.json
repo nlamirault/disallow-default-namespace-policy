@@ -1,0 +1,53 @@
+{
+    "uid": "1299d386-525b-4032-98ae-1949f69f9cfc",
+    "kind": {
+        "kind": "CronJob",
+        "version": "batch/v1"
+    },
+    "object": {
+        "metadata": {
+            "name": "my-app"
+        },
+        "spec": {
+            "schedule": "* * * * *",
+            "jobTemplate": {
+                "template": {
+                    "metadata": {
+                        "labels": {
+                            "app.kubernetes.io/instance": "my-app",
+                            "app.kubernetes.io/name": "my-app"
+                        }
+                    },
+                    "spec": {
+                        "containers": [
+                            {
+                                "image": "perl:5.34.0",
+                                "name": "my-app",
+                                "command": [
+                                    "perl",  "-Mbignum=bpi", "-wle", "print bpi(2000)"
+                                ],
+                                "resources": {
+                                    "limits": {
+                                        "memory": "128Mi"
+                                    },
+                                    "requests": {
+                                        "cpu": "50m",
+                                        "memory": "64Mi"
+                                    }
+                                }
+                            }
+                        ],
+                        "dnsPolicy": "ClusterFirst",
+                        "enableServiceLinks": true,
+                        "restartPolicy": "Always",
+                        "schedulerName": "default-scheduler",
+                        "securityContext": {},
+                        "serviceAccount": "my-app",
+                        "serviceAccountName": "my-app",
+                        "terminationGracePeriodSeconds": 30
+                    }
+                }
+            }
+        }
+    }
+}

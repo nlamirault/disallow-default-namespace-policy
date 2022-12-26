@@ -36,7 +36,7 @@ const DEFAULT_NAMESPACE: &str = "default";
 lazy_static! {
     static ref LOG_DRAIN: Logger = Logger::root(
         logging::KubewardenDrain::new(),
-        o!("policy" => "default-namespace-policy")
+        o!("policy" => "disallow-default-namespace-policy")
     );
 }
 
@@ -47,27 +47,39 @@ pub extern "C" fn wapc_init() {
     register_function("protocol_version", protocol_version_guest);
 }
 
+fn check_namespace(resource: &str, namespace_name: &str) -> CallResult {
+    if namespace_name == DEFAULT_NAMESPACE || namespace_name.is_empty() {
+        info!(
+            LOG_DRAIN,
+            "rejecting {}", &resource;
+            "namespace" => &namespace_name
+        );
+        return kubewarden::reject_request(
+            Some(format!(
+                "{} namespace {} is not accepted",
+                &resource, &namespace_name
+            )),
+            None,
+            None,
+            None,
+        );
+    }
+    kubewarden::accept_request()
+}
+
 fn check_daemonset(obj: serde_json::Value) -> CallResult {
     match serde_json::from_value::<apps::DaemonSet>(obj) {
         Ok(daemonset) => {
-            let namespace_name: String = daemonset.metadata.namespace.unwrap();
-            if namespace_name == DEFAULT_NAMESPACE {
-                info!(
-                    LOG_DRAIN,
-                    "rejecting daemonset";
-                    "daemonset_namespace" => &namespace_name
-                );
+            if daemonset.metadata.namespace.is_none() {
                 return kubewarden::reject_request(
-                    Some(format!(
-                        "daemonset namespace {} is not accepted",
-                        &namespace_name
-                    )),
+                    Some("daemonset without namespace is not accepted".to_string()),
                     None,
                     None,
                     None,
                 );
             }
-            kubewarden::accept_request()
+            let namespace_name: String = daemonset.metadata.namespace.unwrap();
+            check_namespace("daemonset", &namespace_name)
         }
         Err(_) => {
             warn!(LOG_DRAIN, "cannot unmarshal resource: this policy does not know how to evaluate this resource; accept it");
@@ -79,24 +91,16 @@ fn check_daemonset(obj: serde_json::Value) -> CallResult {
 fn check_deployment(obj: serde_json::Value) -> CallResult {
     match serde_json::from_value::<apps::Deployment>(obj) {
         Ok(deployment) => {
-            let namespace_name: String = deployment.metadata.namespace.unwrap();
-            if namespace_name == DEFAULT_NAMESPACE {
-                info!(
-                    LOG_DRAIN,
-                    "rejecting deployment";
-                    "deployment_namespace" => &namespace_name
-                );
+            if deployment.metadata.namespace.is_none() {
                 return kubewarden::reject_request(
-                    Some(format!(
-                        "deployment namespace {} is not accepted",
-                        &namespace_name
-                    )),
+                    Some("deployment without namespace is not accepted".to_string()),
                     None,
                     None,
                     None,
                 );
             }
-            kubewarden::accept_request()
+            let namespace_name: String = deployment.metadata.namespace.unwrap();
+            check_namespace("deployment", &namespace_name)
         }
         Err(_) => {
             warn!(LOG_DRAIN, "cannot unmarshal resource: this policy does not know how to evaluate this resource; accept it");
@@ -108,24 +112,16 @@ fn check_deployment(obj: serde_json::Value) -> CallResult {
 fn check_statefulset(obj: serde_json::Value) -> CallResult {
     match serde_json::from_value::<apps::StatefulSet>(obj) {
         Ok(statefulset) => {
-            let namespace_name: String = statefulset.metadata.namespace.unwrap();
-            if namespace_name == DEFAULT_NAMESPACE {
-                info!(
-                    LOG_DRAIN,
-                    "rejecting statefulset";
-                    "statefulset_namespace" => &namespace_name
-                );
+            if statefulset.metadata.namespace.is_none() {
                 return kubewarden::reject_request(
-                    Some(format!(
-                        "statefulset namespace {} is not accepted",
-                        &namespace_name
-                    )),
+                    Some("statefulset without namespace is not accepted".to_string()),
                     None,
                     None,
                     None,
                 );
             }
-            kubewarden::accept_request()
+            let namespace_name: String = statefulset.metadata.namespace.unwrap();
+            check_namespace("statefulset", &namespace_name)
         }
         Err(_) => {
             warn!(LOG_DRAIN, "cannot unmarshal resource: this policy does not know how to evaluate this resource; accept it");
@@ -137,21 +133,16 @@ fn check_statefulset(obj: serde_json::Value) -> CallResult {
 fn check_pod(obj: serde_json::Value) -> CallResult {
     match serde_json::from_value::<apicore::Pod>(obj) {
         Ok(pod) => {
-            let namespace_name: String = pod.metadata.namespace.unwrap();
-            if namespace_name == DEFAULT_NAMESPACE {
-                info!(
-                    LOG_DRAIN,
-                    "rejecting pod";
-                    "pod_namespace" => &namespace_name
-                );
+            if pod.metadata.namespace.is_none() {
                 return kubewarden::reject_request(
-                    Some(format!("pod namespace {} is not accepted", &namespace_name)),
+                    Some("pod without namespace is not accepted".to_string()),
                     None,
                     None,
                     None,
                 );
             }
-            kubewarden::accept_request()
+            let namespace_name: String = pod.metadata.namespace.unwrap();
+            check_namespace("pod", &namespace_name)
         }
         Err(_) => {
             warn!(LOG_DRAIN, "cannot unmarshal resource: this policy does not know how to evaluate this resource; accept it");
@@ -163,21 +154,16 @@ fn check_pod(obj: serde_json::Value) -> CallResult {
 fn check_job(obj: serde_json::Value) -> CallResult {
     match serde_json::from_value::<batch::Job>(obj) {
         Ok(job) => {
-            let namespace_name: String = job.metadata.namespace.unwrap();
-            if namespace_name == DEFAULT_NAMESPACE {
-                info!(
-                    LOG_DRAIN,
-                    "rejecting job";
-                    "job_namespace" => &namespace_name
-                );
+            if job.metadata.namespace.is_none() {
                 return kubewarden::reject_request(
-                    Some(format!("job namespace {} is not accepted", &namespace_name)),
+                    Some("job without namespace is not accepted".to_string()),
                     None,
                     None,
                     None,
                 );
             }
-            kubewarden::accept_request()
+            let namespace_name: String = job.metadata.namespace.unwrap();
+            check_namespace("job", &namespace_name)
         }
         Err(_) => {
             warn!(LOG_DRAIN, "cannot unmarshal resource: this policy does not know how to evaluate this resource; accept it");
@@ -189,24 +175,16 @@ fn check_job(obj: serde_json::Value) -> CallResult {
 fn check_cronjob(obj: serde_json::Value) -> CallResult {
     match serde_json::from_value::<batch::CronJob>(obj) {
         Ok(cronjob) => {
-            let namespace_name: String = cronjob.metadata.namespace.unwrap();
-            if namespace_name == DEFAULT_NAMESPACE {
-                info!(
-                    LOG_DRAIN,
-                    "rejecting cronjob";
-                    "cronjob_namespace" => &namespace_name
-                );
+            if cronjob.metadata.namespace.is_none() {
                 return kubewarden::reject_request(
-                    Some(format!(
-                        "cronjob namespace {} is not accepted",
-                        &namespace_name
-                    )),
+                    Some("job without namespace is not accepted".to_string()),
                     None,
                     None,
                     None,
                 );
             }
-            kubewarden::accept_request()
+            let namespace_name: String = cronjob.metadata.namespace.unwrap();
+            check_namespace("cronjob", &namespace_name)
         }
         Err(_) => {
             warn!(LOG_DRAIN, "cannot unmarshal resource: this policy does not know how to evaluate this resource; accept it");
@@ -280,6 +258,26 @@ mod tests {
     }
 
     #[test]
+    fn reject_pod_without_namespace() -> Result<(), ()> {
+        let request_file = "test_data/pod_creation_without_namespace.json";
+        let tc = Testcase {
+            name: String::from("Bad name"),
+            fixture_file: String::from(request_file),
+            expected_validation_result: false,
+            settings: Settings {},
+        };
+
+        let res = tc.eval(validate).unwrap();
+        assert!(
+            res.mutated_object.is_none(),
+            "Something mutated with test case: {}",
+            tc.name,
+        );
+
+        Ok(())
+    }
+
+    #[test]
     fn accept_deployment_with_valid_namespace() -> Result<(), ()> {
         let request_file = "test_data/deployment_creation.json";
         let tc = Testcase {
@@ -302,6 +300,26 @@ mod tests {
     #[test]
     fn reject_deployment_with_invalid_namespace() -> Result<(), ()> {
         let request_file = "test_data/deployment_creation_invalid_namespace.json";
+        let tc = Testcase {
+            name: String::from("Bad name"),
+            fixture_file: String::from(request_file),
+            expected_validation_result: false,
+            settings: Settings {},
+        };
+
+        let res = tc.eval(validate).unwrap();
+        assert!(
+            res.mutated_object.is_none(),
+            "Something mutated with test case: {}",
+            tc.name,
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn reject_deployment_without_namespace() -> Result<(), ()> {
+        let request_file = "test_data/deployment_creation_without_namespace.json";
         let tc = Testcase {
             name: String::from("Bad name"),
             fixture_file: String::from(request_file),
@@ -360,6 +378,26 @@ mod tests {
     }
 
     #[test]
+    fn reject_statefulset_without_namespace() -> Result<(), ()> {
+        let request_file = "test_data/statefulset_creation_without_namespace.json";
+        let tc = Testcase {
+            name: String::from("Bad name"),
+            fixture_file: String::from(request_file),
+            expected_validation_result: false,
+            settings: Settings {},
+        };
+
+        let res = tc.eval(validate).unwrap();
+        assert!(
+            res.mutated_object.is_none(),
+            "Something mutated with test case: {}",
+            tc.name,
+        );
+
+        Ok(())
+    }
+
+    #[test]
     fn accept_daemonset_with_valid_namespace() -> Result<(), ()> {
         let request_file = "test_data/daemonset_creation.json";
         let tc = Testcase {
@@ -382,6 +420,146 @@ mod tests {
     #[test]
     fn reject_daemonset_with_invalid_namespace() -> Result<(), ()> {
         let request_file = "test_data/daemonset_creation_invalid_namespace.json";
+        let tc = Testcase {
+            name: String::from("Bad name"),
+            fixture_file: String::from(request_file),
+            expected_validation_result: false,
+            settings: Settings {},
+        };
+
+        let res = tc.eval(validate).unwrap();
+        assert!(
+            res.mutated_object.is_none(),
+            "Something mutated with test case: {}",
+            tc.name,
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn reject_daemonset_without_namespace() -> Result<(), ()> {
+        let request_file = "test_data/daemonset_creation_without_namespace.json";
+        let tc = Testcase {
+            name: String::from("Bad name"),
+            fixture_file: String::from(request_file),
+            expected_validation_result: false,
+            settings: Settings {},
+        };
+
+        let res = tc.eval(validate).unwrap();
+        assert!(
+            res.mutated_object.is_none(),
+            "Something mutated with test case: {}",
+            tc.name,
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn accept_job_with_valid_namespace() -> Result<(), ()> {
+        let request_file = "test_data/job_creation.json";
+        let tc = Testcase {
+            name: String::from("Valid name"),
+            fixture_file: String::from(request_file),
+            expected_validation_result: true,
+            settings: Settings {},
+        };
+
+        let res = tc.eval(validate).unwrap();
+        assert!(
+            res.mutated_object.is_none(),
+            "Something mutated with test case: {}",
+            tc.name,
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn reject_job_with_invalid_namespace() -> Result<(), ()> {
+        let request_file = "test_data/job_creation_invalid_namespace.json";
+        let tc = Testcase {
+            name: String::from("Bad name"),
+            fixture_file: String::from(request_file),
+            expected_validation_result: false,
+            settings: Settings {},
+        };
+
+        let res = tc.eval(validate).unwrap();
+        assert!(
+            res.mutated_object.is_none(),
+            "Something mutated with test case: {}",
+            tc.name,
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn reject_job_without_namespace() -> Result<(), ()> {
+        let request_file = "test_data/job_creation_without_namespace.json";
+        let tc = Testcase {
+            name: String::from("Bad name"),
+            fixture_file: String::from(request_file),
+            expected_validation_result: false,
+            settings: Settings {},
+        };
+
+        let res = tc.eval(validate).unwrap();
+        assert!(
+            res.mutated_object.is_none(),
+            "Something mutated with test case: {}",
+            tc.name,
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn accept_cronjob_with_valid_namespace() -> Result<(), ()> {
+        let request_file = "test_data/cronjob_creation.json";
+        let tc = Testcase {
+            name: String::from("Valid name"),
+            fixture_file: String::from(request_file),
+            expected_validation_result: true,
+            settings: Settings {},
+        };
+
+        let res = tc.eval(validate).unwrap();
+        assert!(
+            res.mutated_object.is_none(),
+            "Something mutated with test case: {}",
+            tc.name,
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn reject_cronjob_with_invalid_namespace() -> Result<(), ()> {
+        let request_file = "test_data/cronjob_creation_invalid_namespace.json";
+        let tc = Testcase {
+            name: String::from("Bad name"),
+            fixture_file: String::from(request_file),
+            expected_validation_result: false,
+            settings: Settings {},
+        };
+
+        let res = tc.eval(validate).unwrap();
+        assert!(
+            res.mutated_object.is_none(),
+            "Something mutated with test case: {}",
+            tc.name,
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn reject_cronjob_without_namespace() -> Result<(), ()> {
+        let request_file = "test_data/cronjob_creation_without_namespace.json";
         let tc = Testcase {
             name: String::from("Bad name"),
             fixture_file: String::from(request_file),

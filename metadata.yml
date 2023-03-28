@@ -24,12 +24,10 @@ contextAware: false
 executionMode: kubewarden-wapc
 annotations:
   io.kubewarden.policy.title: disallow-default-namespace
-  io.kubewarden.policy.description: Short description
+  io.artifacthub.displayName: Disallow default namespace
+  io.kubewarden.policy.description: A Kubewarden policy to disallow usage of the default namespace
   io.kubewarden.policy.author: Nicolas Lamirault <nicolas.lamirault@gmail.com>
   io.kubewarden.policy.url: https://github.com/nlamirault/disallow-default-namespace
   io.kubewarden.policy.source: https://github.com/nlamirault/disallow-default-namespace
   io.kubewarden.policy.license: Apache-2.0
-  io.kubewarden.policy.usage: |
-    Long explaination.
-
-    **Note well:** this can be Markdown text
+  io.kubewarden.policy.ociUrl: ghcr.io/nlamirault/policies/disallow-default-namespace #FIXME this needs to be a valid OCI URL.
